@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Step Analysis</title>
+    <title>SS : System Scan</title>
     <style>
         :root { --p: #8b5cf6; --bg: #09090b; }
         body { 
@@ -19,7 +19,6 @@
         #ai-briefing { font-size: 16px; line-height: 1.8; color: #e4e4e7; margin-bottom: 25px; }
         .highlight { color: #fde047; font-weight: 600; }
         
-        /* 지도 영역 - 처음엔 숨김 */
         #map-step { display: none; margin-top: 20px; }
         #map-container { 
             width: 100%; height: 350px; 
@@ -30,14 +29,16 @@
         .btn-action {
             background: var(--p); color: white; border: none;
             padding: 18px; border-radius: 12px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px;
+            transition: 0.3s;
         }
+        .btn-action:hover { opacity: 0.8; }
     </style>
 </head>
 <body>
 
     <div class="ai-container">
         <span class="status-label" id="step-title">STEP 1: SYSTEM ANALYSIS</span>
-        <div id="ai-briefing">데이터 패킷을 수집하고 있습니다...</div>
+        <div id="ai-briefing">시스템 데이터를 분석 중입니다...</div>
         
         <button class="btn-action" id="next-btn" style="display:none;" onclick="showMapStep()">다음 (위치 확인)</button>
 
@@ -50,32 +51,35 @@
 <script>
     let savedData = null;
 
-    // 페이지 접속하자마자 실행
     window.onload = async function() {
         const display = document.getElementById('ai-briefing');
         const nextBtn = document.getElementById('next-btn');
 
         try {
-            const res = await fetch('http://ip-api.com/json/?fields=66846719');
+            // HTTPS 환경에서 오류가 없는 보안 API 사용
+            const res = await fetch('https://ipapi.co/json/');
             const d = await res.json();
-            savedData = d; // 데이터 저장
+            
+            if(res.ok) {
+                savedData = { lat: d.latitude, lon: d.longitude }; 
 
-            if(d.status === "success") {
                 display.innerHTML = `
-                    분석이 완료되었습니다. 현재 접속 지점은 <span class="highlight">${d.country} ${d.city}</span> 지역이며, 
-                    <span class="highlight">${d.isp}</span> 통신망을 통해 IP <span class="highlight">${d.query}</span>번으로 연결되어 있습니다.<br><br>
+                    분석이 완료되었습니다. 현재 접속 경로는 <span class="highlight">${d.country_name} ${d.city}</span> 지역으로 파악되었습니다. 
+                    네트워크 공급자는 <span class="highlight">${d.org}</span>이며, 할당된 IP 주소는 <span class="highlight">${d.ip}</span>입니다.<br><br>
                     
-                    측정된 좌표는 위도 <span class="highlight">${d.lat}</span>, 경도 <span class="highlight">${d.lon}</span>입니다. 
-                    상세한 위치를 확인하시려면 아래 '다음' 버튼을 눌러주십시오.
+                    시스템이 식별한 좌표는 위도 <span class="highlight">${d.latitude}</span>, 경도 <span class="highlight">${d.longitude}</span>입니다. 
+                    정밀한 위치 데이터를 시각화하려면 아래 버튼을 눌러주십시오.
                 `;
-                nextBtn.style.display = 'block'; // 정보가 나오면 버튼 표시
+                nextBtn.style.display = 'block';
+            } else {
+                throw new Error('API Response Error');
             }
         } catch (e) {
-            display.innerText = "초기 분석 중 오류가 발생했습니다.";
+            display.innerHTML = "데이터 수집 중 오류가 발생했습니다. <br><small style='color:#ef4444'>HTTPS 보안 연결 또는 API 호출 한도를 확인하세요.</small>";
+            console.error(e);
         }
     };
 
-    // '다음' 버튼을 눌렀을 때 실행되는 함수
     function showMapStep() {
         const title = document.getElementById('step-title');
         const briefing = document.getElementById('ai-briefing');
@@ -85,10 +89,10 @@
 
         title.innerText = "STEP 2: VISUAL LOCATION";
         title.style.color = "#fde047";
-        briefing.innerHTML = "좌표 지점의 실시간 지도를 불러왔습니다. 실제 위치와 일치하는지 확인해 보세요.";
-        nextBtn.style.display = 'none'; // 버튼 숨기기
+        briefing.innerHTML = "해당 좌표 지점의 실시간 지도를 동기화했습니다. 실제 위치와 일치하는지 대조해 보시기 바랍니다.";
+        nextBtn.style.display = 'none'; 
         
-        // 지도 로드
+        // 구글 맵 무료 임베드 주소
         const freeMapUrl = `https://maps.google.com/maps?q=${savedData.lat},${savedData.lon}&z=15&output=embed`;
         mapStep.style.display = 'block';
         mapContainer.innerHTML = `<iframe src="${freeMapUrl}"></iframe>`;
